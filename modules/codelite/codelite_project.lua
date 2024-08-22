@@ -133,7 +133,7 @@
 				for cfg in project.eachconfig(prj) do
 					local cfgname = codelite.cfgname(cfg)
 					local fcfg = p.fileconfig.getconfig(node, cfg)
-					if not fcfg or fcfg.flags.ExcludeFromBuild then
+					if not fcfg or fcfg.flags.ExcludeFromBuild or fcfg.buildaction == "None" then
 						table.insert(excludesFromBuild, cfgname)
 					end
 				end
@@ -405,22 +405,31 @@
 		local dependencies = {}
 		local makefilerules = {}
 		local function addrule(dependencies, makefilerules, config, filename)
-			if #config.buildcommands == 0 or #config.buildoutputs == 0 then
+			if #config.buildcommands > 0 and #config.buildoutputs > 0 then
+				local inputs = table.implode(project.getrelative(cfg.project, config.buildinputs), "", "", " ")
+				if filename ~= "" and inputs ~= "" then
+					filename = filename .. " "
+				end
+				local outputs = project.getrelative(cfg.project, config.buildoutputs[1])
+				local buildmessage = ""
+				if config.buildmessage then
+					buildmessage = "\t@{ECHO} " .. p.quote(config.buildmessage) .. "\n"
+				end
+				local commands = table.implode(config.buildcommands,"\t","\n","")
+				table.insert(makefilerules, os.translateCommandsAndPaths(outputs .. ": " .. filename .. inputs .. "\n" .. buildmessage .. "\t@$(MakeDirCommand) $(@D)\n" .. commands, cfg.project.basedir, cfg.project.location))
+				table.insertflat(dependencies, outputs)
+				return true
+			elseif config.buildaction == "Copy" and filename ~= "" then
+				local output = project.getrelative(cfg.workspace, path.join(cfg.targetdir, config.name))
+				local create_directory_command = '\t@$(MakeDirCommand) $(@D)\n'
+				local command = '\t' .. os.translateCommands('{COPYFILE} "' .. filename .. '" "' .. output ..'"') .. '\n'
+
+				table.insert(makefilerules, output .. ": " .. filename .. '\n' .. create_directory_command .. command)
+				table.insert(dependencies, output)
+				return true
+			else
 				return false
 			end
-			local inputs = table.implode(project.getrelative(cfg.project, config.buildinputs), "", "", " ")
-			if filename ~= "" and inputs ~= "" then
-				filename = filename .. " "
-			end
-			local outputs = project.getrelative(cfg.project, config.buildoutputs[1])
-			local buildmessage = ""
-			if config.buildmessage then
-				buildmessage = "\t@{ECHO} " .. p.quote(config.buildmessage) .. "\n"
-			end
-			local commands = table.implode(config.buildcommands,"\t","\n","")
-			table.insert(makefilerules, os.translateCommandsAndPaths(outputs .. ": " .. filename .. inputs .. "\n" .. buildmessage .. "\t@$(MakeDirCommand) $(@D)\n" .. commands, cfg.project.basedir, cfg.project.location))
-			table.insertflat(dependencies, outputs)
-			return true
 		end
 		local tr = project.getsourcetree(cfg.project)
 		p.tree.traverse(tr, {

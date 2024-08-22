@@ -117,7 +117,7 @@
 	api.register {
 		name = "buildinputs",
 		scope = "config",
-		kind = "list:path",
+		kind = "list:file",
 		tokens = true,
 		pathVars = false,
 	}
@@ -299,6 +299,7 @@
 			"Mixed",
 			"NativeOnly",
 			"ManagedOnly",
+			"NativeWithManagedCore"
 		}
 	}
 
@@ -1872,6 +1873,17 @@
 			{ "solaris",  "Solaris" },
 			{ "uwp",      "Microsoft Universal Windows Platform"},
 			{ "windows",  "Microsoft Windows" },
+		}
+	}
+
+	newoption
+	{
+		trigger     = "shell",
+		value       = "VALUE",
+		description = "Select shell (for command token substitution)",
+		allowed = {
+			{ "cmd", "Windows command shell" },
+			{ "posix", "For posix shells" },
 		}
 	}
 
