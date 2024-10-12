@@ -203,6 +203,14 @@
 		return _OPTIONS.os or _TARGET_OS
 	end
 
+--
+-- Retrieve the current target architecture ID string.
+--
+
+	function os.targetarch()
+		return _OPTIONS.arch or _TARGET_ARCH
+	end
+
 	function os.get()
 		local caller = filelineinfo(2)
 		premake.warnOnce(caller, "os.get() is deprecated, use 'os.target()' or 'os.host()'.\n   @%s\n", caller)
@@ -804,15 +812,15 @@
 
 	os.systemTags =
 	{
-		["aix"]      = { "aix",     "posix" },
-		["bsd"]      = { "bsd",     "posix" },
-		["haiku"]    = { "haiku",   "posix" },
+		["aix"]      = { "aix",     "posix", "desktop" },
+		["bsd"]      = { "bsd",     "posix", "desktop" },
+		["haiku"]    = { "haiku",   "posix", "desktop" },
 		["ios"]      = { "ios",     "darwin", "posix", "mobile" },
-		["linux"]    = { "linux",   "posix" },
-		["macosx"]   = { "macosx",  "darwin", "posix" },
-		["solaris"]  = { "solaris", "posix" },
-		["uwp"]      = { "uwp", "windows" },
-		["windows"]  = { "windows", "win32" },
+		["linux"]    = { "linux",   "posix", "desktop" },
+		["macosx"]   = { "macosx",  "darwin", "posix", "desktop" },
+		["solaris"]  = { "solaris", "posix", "desktop" },
+		["uwp"]      = { "uwp", "windows", "desktop" },
+		["windows"]  = { "windows", "win32", "desktop" },
 	}
 
 	function os.getSystemTags(name)

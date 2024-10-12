@@ -4,6 +4,7 @@
  * \author Copyright (c) 2002-2017 Jason Perkins and the Premake project
  */
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -66,11 +67,13 @@ static const luaL_Reg os_functions[] = {
 	{ "_is64bit",               os_is64bit              },
 	{ "isdir",                  os_isdir                },
 	{ "getcwd",                 os_getcwd               },
+	{ "getnumcpus",             os_getnumcpus           },
 	{ "getpass",                os_getpass              },
 	{ "getWindowsRegistry",     os_getWindowsRegistry   },
 	{ "listWindowsRegistry",    os_listWindowsRegistry  },
 	{ "getversion",             os_getversion           },
 	{ "host",                   os_host                 },
+	{ "hostarch",               os_hostarch             },
 	{ "isfile",                 os_isfile               },
 	{ "islink",                 os_islink               },
 	{ "locate",                 os_locate               },
@@ -210,9 +213,11 @@ int premake_init(lua_State* L)
 	lua_pushstring(L, PREMAKE_PROJECT_URL);
 	lua_setglobal(L, "_PREMAKE_URL");
 
-	/* set the OS platform variable */
-	lua_pushstring(L, PLATFORM_STRING);
-	lua_setglobal(L, "_TARGET_OS");
+#if PLATFORM_COSMO
+	/* set _COSMOPOLITAN if its a Cosmopolitan build */
+	lua_pushboolean(L, TRUE);
+	lua_setglobal(L, "_COSMOPOLITAN");
+#endif
 
 	/* find the user's home directory */
 	value = getenv("HOME");
@@ -252,12 +257,14 @@ static void setErrorColor(lua_State* L)
 
 
 
-void printLastError(lua_State* L)
+void premake_handle_lua_error(lua_State* L)
 {
 	const char* message = lua_tostring(L, -1);
 	int oldColor = term_doGetTextColor();
 	setErrorColor(L);
-	printf(ERROR_MESSAGE, message);
+	/* avoid printing a double Error: prefix for premake.error() messages */
+	int has_error_prefix = strncmp(message, "** Error:", 9) == 0;
+	printf(has_error_prefix ? "%s\n" : ERROR_MESSAGE, message);
 	term_doSetTextColor(oldColor);
 }
 
@@ -307,14 +314,14 @@ int premake_execute(lua_State* L, int argc, const char** argv, const char* scrip
 
 	/* Find and run the main Premake bootstrapping script */
 	if (run_premake_main(L, script) != OKAY) {
-		printLastError(L);
+		premake_handle_lua_error(L);
 		return !OKAY;
 	}
 
 	/* and call the main entry point */
 	lua_getglobal(L, "_premake_main");
 	if (premake_pcall(L, 0, 1) != OKAY) {
-		printLastError(L);
+		premake_handle_lua_error(L);
 		return !OKAY;
 	}
 	else {

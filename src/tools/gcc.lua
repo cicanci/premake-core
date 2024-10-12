@@ -138,6 +138,18 @@
 			["C++"] = "-x c++",
 			["Objective-C"] = "-x objective-c",
 			["Objective-C++"] = "-x objective-c++",
+		},
+		sanitize = {
+			Address = "-fsanitize=address",
+		},
+		visibility = {
+			Default = "-fvisibility=default",
+			Hidden = "-fvisibility=hidden",
+			Internal = "-fvisibility=internal",
+			Protected = "-fvisibility=protected",
+		},
+		inlinesvisibility = {
+			Hidden = "-fvisibility-inlines-hidden"
 		}
 	}
 
@@ -217,6 +229,8 @@
 			["C++17"] = "-std=c++17",
 			["C++2a"] = "-std=c++2a",
 			["C++20"] = "-std=c++20",
+			["C++2b"] = "-std=c++2b",
+			["C++23"] = "-std=c++23",
 			["gnu++98"] = "-std=gnu++98",
 			["gnu++0x"] = "-std=gnu++0x",
 			["gnu++11"] = "-std=gnu++11",
@@ -226,22 +240,12 @@
 			["gnu++17"] = "-std=gnu++17",
 			["gnu++2a"] = "-std=gnu++2a",
 			["gnu++20"] = "-std=gnu++20",
-			["C++latest"] = "-std=c++20",
+			["gnu++2b"] = "-std=gnu++2b",
+			["gnu++23"] = "-std=gnu++23",
+			["C++latest"] = "-std=c++23",
 		},
 		rtti = {
 			Off = "-fno-rtti"
-		},
-		sanitize = {
-			Address = "-fsanitize=address",
-		},
-		visibility = {
-			Default = "-fvisibility=default",
-			Hidden = "-fvisibility=hidden",
-			Internal = "-fvisibility=internal",
-			Protected = "-fvisibility=protected",
-		},
-		inlinesvisibility = {
-			Hidden = "-fvisibility-inlines-hidden"
 		}
 	}
 
@@ -289,7 +293,7 @@
 		local result = {}
 
 		table.foreachi(cfg.forceincludes, function(value)
-			local fn = project.getrelative(cfg.project, value)
+			local fn = p.tools.getrelative(cfg.project, value)
 			table.insert(result, string.format('-include %s', p.quoted(fn)))
 		end)
 
@@ -322,24 +326,24 @@
 	function gcc.getincludedirs(cfg, dirs, extdirs, frameworkdirs, includedirsafter)
 		local result = {}
 		for _, dir in ipairs(dirs) do
-			dir = project.getrelative(cfg.project, dir)
+			dir = p.tools.getrelative(cfg.project, dir)
 			table.insert(result, '-I' .. p.quoted(dir))
 		end
 
 		if table.contains(os.getSystemTags(cfg.system), "darwin") then
 			for _, dir in ipairs(frameworkdirs or {}) do
-				dir = project.getrelative(cfg.project, dir)
+				dir = p.tools.getrelative(cfg.project, dir)
 				table.insert(result, '-F' .. p.quoted(dir))
 			end
 		end
 
 		for _, dir in ipairs(extdirs or {}) do
-			dir = project.getrelative(cfg.project, dir)
+			dir = p.tools.getrelative(cfg.project, dir)
 			table.insert(result, '-isystem ' .. p.quoted(dir))
 		end
 
 		for _, dir in ipairs(includedirsafter or {}) do
-			dir = project.getrelative(cfg.project, dir)
+			dir = p.tools.getrelative(cfg.project, dir)
 			table.insert(result, '-idirafter ' .. p.quoted(dir))
 		end
 
@@ -370,18 +374,18 @@
 		-- test locally in the project folder first (this is the most likely location)
 		local testname = path.join(cfg.project.basedir, pch)
 		if os.isfile(testname) then
-			return project.getrelative(cfg.project, testname)
+			return p.tools.getrelative(cfg.project, testname)
 		else
 			-- else scan in all include dirs.
 			for _, incdir in ipairs(cfg.includedirs) do
 				testname = path.join(incdir, pch)
 				if os.isfile(testname) then
-					return project.getrelative(cfg.project, testname)
+					return p.tools.getrelative(cfg.project, testname)
 				end
 			end
 		end
 
-		return project.getrelative(cfg.project, path.getabsolute(pch))
+		return p.tools.getrelative(cfg.project, path.getabsolute(pch))
 	end
 
 --
@@ -478,6 +482,10 @@
 				if cfg.system == p.WINDOWS then return "-mwindows" end
 			end,
 		},
+		linker = {
+			Default = "",
+			LLD = "-fuse-ld=lld"
+		},
 		sanitize = {
 			Address = "-fsanitize=address",
 		},
@@ -535,14 +543,14 @@
 
 		if table.contains(os.getSystemTags(cfg.system), "darwin") then
 			for _, dir in ipairs(cfg.frameworkdirs) do
-				dir = project.getrelative(cfg.project, dir)
+				dir = p.tools.getrelative(cfg.project, dir)
 				table.insert(flags, '-F' .. p.quoted(dir))
 			end
 		end
 
 		if cfg.flags.RelativeLinks then
 			for _, dir in ipairs(config.getlinks(cfg, "siblings", "directory")) do
-				local libFlag = "-L" .. p.project.getrelative(cfg.project, dir)
+				local libFlag = "-L" .. p.tools.getrelative(cfg.project, dir)
 				if not table.contains(flags, libFlag) then
 					table.insert(flags, libFlag)
 				end
@@ -681,8 +689,5 @@
 		else
 			version = ""
 		end
-		if ((cfg.gccprefix  or version ~= "") and gcc.tools[tool]) or tool == "rc" then
-			return (cfg.gccprefix or "") .. gcc.tools[tool] .. version
-		end
-		return nil
+		return (cfg.gccprefix or "") .. gcc.tools[tool] .. version
 	end

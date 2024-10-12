@@ -65,7 +65,10 @@
 		symbols = gcc.shared.symbols,
 		unsignedchar = gcc.shared.unsignedchar,
 		omitframepointer = gcc.shared.omitframepointer,
-		compileas = gcc.shared.compileas
+		compileas = gcc.shared.compileas,
+		sanitize = gcc.shared.sanitize,
+		visibility = gcc.shared.visibility,
+		inlinesvisibility = gcc.shared.inlinesvisibility
 	}
 
 	clang.cflags = table.merge(gcc.cflags, {
@@ -86,7 +89,7 @@
 	end
 
 --
--- Returns C/C++ system version related build flags
+-- Returns system version related build flags
 --
 
 	function clang.getsystemversionflags(cfg)
@@ -250,6 +253,7 @@
 				if cfg.system == p.WINDOWS then return "-mwindows" end
 			end,
 		},
+		linker = gcc.ldflags.linker,
 		sanitize = {
 			Address = "-fsanitize=address",
 		},
